@@ -29,8 +29,6 @@ cp .env.example .env
 # Edit .env with your GitHub credentials
 # Required variables:
 # - GITHUB_TOKEN: Your GitHub Personal Access Token
-# - GITHUB_USERNAME: Your GitHub username
-# - GITHUB_EMAIL: Your GitHub email
 ```
 
 ## Running the Server
@@ -48,50 +46,55 @@ The server will start at `http://localhost:8000`
 ### 1. GET /
 Root endpoint returning API information.
 
-### 2. POST /analyze-dead-code
-Analyzes a GitHub repository for dead code and optionally creates a pull request to remove it.
+### 2. POST /analyze
+Analyzes a GitHub repository for dead code.
 
 Request body:
 ```json
 {
-    "repo_url": "https://github.com/owner/repo",
-    "create_pr": true  // Optional, defaults to false
+    "repo_url": "https://github.com/owner/repo"
+}
+```
+
+Response:
+```json
+[
+    {
+        "file_path": "path/to/file.js",
+        "symbol_name": "unusedFunction",
+        "symbol_type": "function",
+        "line_number": 42
+    },
+    {
+        "file_path": "path/to/file.js",
+        "symbol_name": "UnusedClass",
+        "symbol_type": "class",
+        "line_number": 100
+    }
+]
+```
+
+### 3. POST /create-pr
+Analyzes a GitHub repository for dead code, removes it, and creates a pull request with the changes.
+
+Request body:
+```json
+{
+    "repo_url": "https://github.com/owner/repo"
 }
 ```
 
 Response:
 ```json
 {
-    "repository": "owner/repo",
-    "analysis": {
-        "unused_functions": [
-            {
-                "name": "function_name",
-                "filepath": "path/to/file",
-                "source": "function function_name() { ... }"
-            }
-        ],
-        "unused_classes": [
-            {
-                "name": "class_name",
-                "filepath": "path/to/file",
-                "source": "class class_name { ... }"
-            }
-        ],
-        "total_unused_items": 2
-    },
-    "pull_request": {  // Only included if create_pr is true
-        "url": "https://github.com/owner/repo/pull/123",
-        "number": 123
-    }
+    "pr_url": "https://github.com/owner/repo/pull/123",
+    "branch_name": "dead-code-removal-20230615123456",
+    "removed_items": [
+        "function unusedFunction in path/to/file.js",
+        "class UnusedClass in path/to/file.js"
+    ]
 }
 ```
-
-When `create_pr` is set to `true`, the API will:
-1. Create a new branch named `chore/remove-dead-code`
-2. Remove all detected dead code
-3. Create a pull request with detailed information about removed code
-4. Return the PR URL and number in the response
 
 ## API Documentation
 
@@ -101,7 +104,7 @@ Once the server is running, you can access:
 
 ## GitHub Authentication
 
-The API requires GitHub credentials to create pull requests. These should be set in your `.env` file:
+The API requires a GitHub Personal Access Token to create pull requests. This should be set in your `.env` file:
 
 1. Create a GitHub Personal Access Token:
    - Go to GitHub Settings > Developer Settings > Personal Access Tokens
@@ -111,8 +114,6 @@ The API requires GitHub credentials to create pull requests. These should be set
 2. Set up your .env file:
    ```env
    GITHUB_TOKEN=your_github_personal_access_token
-   GITHUB_USERNAME=your_github_username
-   GITHUB_EMAIL=your_github_email
    ```
 
-3. The API will automatically use these credentials when creating pull requests 
+3. The API will automatically use this token when creating pull requests 
